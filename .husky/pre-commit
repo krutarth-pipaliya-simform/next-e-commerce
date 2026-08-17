@@ -1,0 +1,1 @@
+npx lint-staged\nnpm run type-check
