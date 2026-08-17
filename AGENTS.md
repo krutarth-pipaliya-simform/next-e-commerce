@@ -14,6 +14,7 @@ When working on this project (whether you are Claude Code, Cursor, Antigravity, 
 
 1. **Git Workflow**: Review `.gemini/skills/git-workflow/SKILL.md` BEFORE making any commits, branches, or PRs. You must use conventional commits and follow the branching strategy.
 2. **Project Plan**: Review `ecommerce_plan.md` and `development_guide.md` to understand the architecture, design choices, and features currently being built.
+3. **Documentation**: After making changes to a major feature, you MUST update `README.md` to reflect those changes before committing.
 
 ## Project Commands
 
