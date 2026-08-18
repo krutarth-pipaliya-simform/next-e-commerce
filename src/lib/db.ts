@@ -1,14 +1,12 @@
 import { PrismaClient } from '../generated/prisma/client';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-
-neonConfig.webSocketConstructor = ws;
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const connectionString = process.env.DATABASE_URL || '';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
 const createPrismaClient = () => {
-  const adapter = new PrismaNeon({ connectionString });
   return new PrismaClient({ adapter, log: ['query'] });
 };
 

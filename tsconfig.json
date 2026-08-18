@@ -19,8 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
-    }
+      "@/*": ["./src/*"]
+    },
+    "tsBuildInfoFile": "./.next/tsconfig.tsbuildinfo"
   },
   "include": [
     "next-env.d.ts",
