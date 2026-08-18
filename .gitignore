@@ -49,3 +49,13 @@ next-env.d.ts
 !.dev.vars.example
 
 !.env.example
+
+# Prisma Generated Client
+/src/generated/prisma
+.prisma/
+
+# IDE & AI Assistant Folders
+.windsurf
+.claude
+.cursor
+.idea/
