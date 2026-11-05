@@ -1,0 +1,5 @@
+# Third-party skills are kept byte-identical to their pinned sources (.claude/THIRD-PARTY-SKILLS.md)
+.claude/skills/*
+!.claude/skills/git-workflow
+!.claude/skills/scaffold-api
+!.claude/skills/server-action
