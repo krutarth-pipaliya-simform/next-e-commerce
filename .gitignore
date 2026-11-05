@@ -56,6 +56,6 @@ next-env.d.ts
 
 # IDE & AI Assistant Folders
 .windsurf
-.claude
+.claude/settings.local.json
 .cursor
 .idea/
