@@ -133,4 +133,27 @@
   ::placeholder {
     color: var(--color-muted);
   }
+
+  /*
+   * Pointer cursor on everything the user can click or toggle. Tailwind v4's
+   * preflight resets buttons to the default arrow, and browsers show an arrow
+   * on checkboxes, radios and selects. Links already get a pointer. Disabled
+   * controls keep the arrow; utilities (cursor-not-allowed, cursor-progress)
+   * still win because they sit in a later layer.
+   */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary,
+  select:not(:disabled),
+  input:is(
+      [type='checkbox'],
+      [type='radio'],
+      [type='button'],
+      [type='submit'],
+      [type='reset'],
+      [type='file']
+    ):not(:disabled),
+  label:has(input:is([type='checkbox'], [type='radio']):not(:disabled)) {
+    cursor: pointer;
+  }
 }

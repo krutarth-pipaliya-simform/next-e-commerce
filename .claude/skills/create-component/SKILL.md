@@ -88,5 +88,6 @@ Done when all of these hold:
 - [ ] It reuses existing components and icons wherever one fits.
 - [ ] Every colour comes from a theme token.
 - [ ] Every prop has a JSDoc comment.
+- [ ] Every clickable part is a native control the global cursor rule covers (see Conventions in `CLAUDE.md`), and disabled or pending states set `disabled:cursor-not-allowed` or `cursor-progress`.
 - [ ] `index.ts` exports the component and its public types.
 - [ ] `npm run type-check` and `npx eslint <folder>` pass.

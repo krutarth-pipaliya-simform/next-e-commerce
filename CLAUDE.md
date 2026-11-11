@@ -88,5 +88,6 @@ The project is a multi-vendor marketplace on the Next.js App Router, deployed to
 
 - Prettier and ESLint run on staged files through `lint-staged` (`.lintstagedrc`). Code uses single quotes and trailing commas.
 - Use `next/image` instead of `<img>`.
+- Everything clickable shows a pointer cursor. A global rule at the end of `@layer base` in `src/app/(frontend)/globals.css` gives it to enabled native controls: `<button>`, `role='button'`, `<summary>`, `<select>`, checkbox, radio, button/submit/file inputs, and a `<label>` that wraps a checkbox or radio (a label tied with `htmlFor` isn't covered). Build clickable things from those elements so the rule applies, and add `cursor-pointer` only to a custom element it can't see. Disabled and pending states use `disabled:cursor-not-allowed` or `cursor-progress`.
 - Never prefix secrets with `NEXT_PUBLIC_`. Local secrets are in `.env` (`DATABASE_URL`, `AUTH_SECRET`) and `.dev.vars` (for Wrangler).
 - Use conventional commits, for example `feat(cart): ...` or `docs(db): ...`.
