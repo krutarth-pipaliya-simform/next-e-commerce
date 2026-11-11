@@ -56,3 +56,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+To fill the shop with a demo catalogue (5 approved stores, 21 colourful products with variants, photos and reviews), run the seed. The photos are links to [DummyJSON](https://dummyjson.com/docs/products)'s free product images, which `next.config.ts` allows through `images.remotePatterns`. It writes to the database in `DATABASE_URL`. Re-running it replaces the demo data, and `--remove` deletes it. Everything it creates belongs to `@seed.daylight.test` users.
+
+```bash
+npx tsx --env-file=.env scripts/seed_demo_products.ts
+npx tsx --env-file=.env scripts/seed_demo_products.ts --remove
+```
