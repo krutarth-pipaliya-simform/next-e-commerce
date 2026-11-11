@@ -12,19 +12,22 @@ export function InputField({
   label,
   hint,
   error,
+  invalid = false,
   className,
   ...props
 }: InputFieldProps) {
+  const isInvalid = invalid || Boolean(error);
+
   return (
     <FieldShell id={id} label={label} hint={hint} error={error}>
       <input
         id={id}
         name={props.name ?? id}
-        aria-invalid={error ? true : undefined}
+        aria-invalid={isInvalid || undefined}
         aria-describedby={describedBy(id, hint, error)}
         className={cn(
           controlClasses,
-          error ? 'border-sale' : 'border-divider',
+          isInvalid ? 'border-sale' : 'border-divider',
           className,
         )}
         {...props}

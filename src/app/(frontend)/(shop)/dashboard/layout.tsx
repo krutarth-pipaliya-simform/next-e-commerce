@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
 import { LogOutIcon, UserIcon } from '@/components/ui/icons';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
-import { auth, signOut } from '@/lib/auth';
+import { logout } from '@/actions/auth';
+import { auth } from '@/lib/auth';
+import { initials } from '@/lib/utils';
 
 const nav = [
   { href: '/dashboard', label: 'Overview' },
@@ -9,14 +11,6 @@ const nav = [
   { href: '/dashboard/settings', label: 'Profile & addresses' },
   { href: '/sell', label: 'Sell on Daylight' },
 ];
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
-}
 
 // Display only. Each page still has to check the session itself: a layout
 // doesn't re-run on client navigation and doesn't stop its pages rendering.
@@ -56,18 +50,13 @@ export default function DashboardLayout({
         </Suspense>
       }
       footer={
-        <form
-          action={async () => {
-            'use server';
-            await signOut({ redirectTo: '/' });
-          }}
-        >
+        <form action={logout}>
           <button
             type="submit"
             className="flex h-11 w-full items-center gap-3 rounded-control px-3 text-[15px] font-medium text-body hover:bg-sunken hover:text-ink"
           >
             <LogOutIcon />
-            Sign out
+            Log out
           </button>
         </form>
       }

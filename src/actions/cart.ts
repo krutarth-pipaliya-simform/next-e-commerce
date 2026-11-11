@@ -1,12 +1,13 @@
 'use server';
 
-import { auth } from '@/lib/auth';
+import { authorizeAction } from '@/lib/authz';
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
+// Any signed-in role can shop.
 async function getUserId() {
-  const session = await auth();
-  return session?.user?.id;
+  const { user } = await authorizeAction();
+  return user?.id;
 }
 
 export async function getCart() {

@@ -19,8 +19,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        // Emails are stored lower-case (see signUp in src/actions/auth.ts).
         const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
+          where: {
+            email: (credentials.email as string).trim().toLowerCase(),
+          },
         });
 
         if (!user || !user.hashedPassword) {

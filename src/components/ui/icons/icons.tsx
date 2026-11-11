@@ -179,6 +179,42 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
+export function EyeIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </Stroke>
+  );
+}
+
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M10.6 5.1A9.7 9.7 0 0 1 12 5c6 0 9.5 7 9.5 7a16.6 16.6 0 0 1-2.7 3.6M6.6 6.6C3.9 8.4 2.5 12 2.5 12S6 19 12 19a9.5 9.5 0 0 0 5.4-1.6" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
+    </Stroke>
+  );
+}
+
+export function AlertCircleIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5M12 16.25v.25" />
+    </Stroke>
+  );
+}
+
+export function StoreIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M4 9.5V20h16V9.5M3 9.5 5 4h14l2 5.5a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z" />
+      <path d="M10 20v-5h4v5" />
+    </Stroke>
+  );
+}
+
 export function GiftIcon(props: IconProps) {
   return (
     <Stroke {...props}>

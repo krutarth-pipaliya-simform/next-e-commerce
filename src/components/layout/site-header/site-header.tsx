@@ -1,15 +1,11 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import {
-  BagIcon,
-  HeartIcon,
-  SearchIcon,
-  UserIcon,
-} from '@/components/ui/icons';
+import { BagIcon, HeartIcon, SearchIcon } from '@/components/ui/icons';
+import { AccountMenu } from '@/components/layout/account-menu';
 import { MobileMenu } from '@/components/layout/mobile-menu';
 import { NavLinks, primaryLinks } from '@/components/layout/nav-links';
 import { Container } from '@/components/ui/container';
-import { auth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/authz';
 
 const iconButton =
   'relative flex size-11 items-center justify-center rounded-control text-ink transition-colors hover:bg-white/70';
@@ -32,17 +28,16 @@ function SearchForm({ id }: { id: string }) {
   );
 }
 
-/** Account icon: /dashboard when signed in, /login otherwise. */
-async function AccountLink() {
-  const session = await auth();
+/**
+ * Loads the user for the account dropdown. Uses getCurrentUser, so a
+ * deleted account's leftover cookie reads as signed out.
+ */
+async function AccountSlot() {
+  const user = await getCurrentUser();
   return (
-    <Link
-      href={session?.user ? '/dashboard' : '/login'}
-      aria-label="Account"
-      className={iconButton}
-    >
-      <UserIcon />
-    </Link>
+    <AccountMenu
+      user={user && { name: user.name, email: user.email, role: user.role }}
+    />
   );
 }
 
@@ -65,7 +60,10 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
       <Container>
         <nav
           aria-label="Main"
-          className="glass-chrome flex h-16 items-center gap-2 rounded-control px-3 [--glass-blur:36px] sm:gap-4"
+          // relative z-10: the glass blur makes the nav its own stacking
+          // context, so without it the phone search row below paints over
+          // the Menu and account dropdowns.
+          className="glass-chrome relative z-10 flex h-16 items-center gap-2 rounded-control px-3 [--glass-blur:36px] sm:gap-4"
         >
           <MobileMenu links={primaryLinks} buttonClassName={iconButton} />
 
@@ -91,15 +89,12 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
             >
               <HeartIcon />
             </Link>
-            {/* Only the account link waits for the session, so the rest of the header streams first. */}
+            {/* Only the account menu waits for the session, so the rest of the
+                header streams first. The empty slot keeps either state from flashing. */}
             <Suspense
-              fallback={
-                <Link href="/login" aria-label="Account" className={iconButton}>
-                  <UserIcon />
-                </Link>
-              }
+              fallback={<span aria-hidden="true" className="size-11" />}
             >
-              <AccountLink />
+              <AccountSlot />
             </Suspense>
             <Link
               href="/cart"

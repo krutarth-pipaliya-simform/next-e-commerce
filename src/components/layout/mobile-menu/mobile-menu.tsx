@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
 import { MenuIcon } from '@/components/ui/icons';
+import { useDetailsDismiss } from '@/lib/use-details-dismiss';
 
 export type MobileMenuProps = {
   /** Links listed in the menu, in order. */
@@ -18,44 +17,17 @@ export type MobileMenuProps = {
  * navigation, on Escape, and on a tap outside it.
  */
 export function MobileMenu({ links, buttonClassName }: MobileMenuProps) {
-  const pathname = usePathname();
-  const menu = useRef<HTMLDetailsElement>(null);
-
-  // The header lives in a layout that survives navigation, so close the
-  // menu whenever the route changes.
-  useEffect(() => {
-    if (menu.current) menu.current.open = false;
-  }, [pathname]);
-
-  useEffect(() => {
-    function close(event: KeyboardEvent | PointerEvent) {
-      const details = menu.current;
-      if (!details?.open) return;
-      if (event instanceof KeyboardEvent) {
-        if (event.key !== 'Escape') return;
-        details.open = false;
-        details.querySelector('summary')?.focus();
-        return;
-      }
-      if (!details.contains(event.target as Node)) details.open = false;
-    }
-    document.addEventListener('keydown', close);
-    document.addEventListener('pointerdown', close);
-    return () => {
-      document.removeEventListener('keydown', close);
-      document.removeEventListener('pointerdown', close);
-    };
-  }, []);
+  const menu = useDetailsDismiss();
 
   return (
     <details ref={menu} className="group relative lg:hidden">
       <summary
-        className={`${buttonClassName} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+        className={`${buttonClassName} list-none [&::-webkit-details-marker]:hidden`}
       >
         <MenuIcon />
         <span className="sr-only">Menu</span>
       </summary>
-      <ul className="glass-text absolute top-14 left-0 flex w-56 flex-col gap-1 rounded-panel p-2">
+      <ul className="absolute top-14 left-0 flex w-56 flex-col gap-1 rounded-panel border border-hairline bg-surface shadow-[0_18px_44px_rgb(17_18_20/0.12),0_1px_2px_rgb(17_18_20/0.06)] p-2">
         {links.map(({ href, label }) => (
           <li key={href}>
             <Link
