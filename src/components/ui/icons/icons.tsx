@@ -255,3 +255,21 @@ export function GiftIcon(props: IconProps) {
     </Stroke>
   );
 }
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M4 7h16M10 11v6M14 11v6" />
+      <path d="M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7" />
+    </Stroke>
+  );
+}
+
+export function LockIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V7.5a4 4 0 0 1 8 0V11" />
+    </Stroke>
+  );
+}

@@ -6,6 +6,7 @@ import { MobileMenu } from '@/components/layout/mobile-menu';
 import { NavLinks, primaryLinks } from '@/components/layout/nav-links';
 import { Container } from '@/components/ui/container';
 import { getCurrentUser } from '@/lib/authz';
+import { getBagCount } from '@/lib/cart';
 
 const iconButton =
   'relative flex size-11 items-center justify-center rounded-control text-ink transition-colors hover:bg-white/70';
@@ -41,20 +42,35 @@ async function AccountSlot() {
   );
 }
 
-export type SiteHeaderProps = {
-  /**
-   * Items in the bag, shown as a badge on the bag icon.
-   * @default 0
-   */
-  cartCount?: number;
-};
+/** The bag link, with a badge counting the items in the bag. */
+function BagLink({ count }: { count: number }) {
+  return (
+    <Link
+      href="/cart"
+      aria-label={`Bag, ${count} ${count === 1 ? 'item' : 'items'}`}
+      className={iconButton}
+    >
+      <BagIcon />
+      {count > 0 && (
+        <span className="absolute top-1 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-ink px-1 text-[11px] font-semibold text-white tabular-nums">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Loads the bag count for the signed-in user; signed out, the bag is empty. */
+async function BagSlot() {
+  const user = await getCurrentUser();
+  return <BagLink count={user ? await getBagCount(user.id) : 0} />;
+}
 
 /**
  * The floating glass nav. Below 1024px the links move into a Menu
  * disclosure; below 640px search drops to its own full-width row.
- * Pass cartCount once the cart count is fetched in the layout.
  */
-export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
+export function SiteHeader() {
   return (
     <header className="sticky top-4 z-20 mt-4">
       <Container>
@@ -96,18 +112,9 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
             >
               <AccountSlot />
             </Suspense>
-            <Link
-              href="/cart"
-              aria-label={`Bag, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}`}
-              className={iconButton}
-            >
-              <BagIcon />
-              {cartCount > 0 && (
-                <span className="absolute top-1 right-1 flex size-[18px] items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white tabular-nums">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+            <Suspense fallback={<BagLink count={0} />}>
+              <BagSlot />
+            </Suspense>
           </div>
         </nav>
 

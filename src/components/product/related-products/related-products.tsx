@@ -5,18 +5,21 @@ import { QuickAddButton } from '@/components/product/quick-add-button';
 import { getRelatedProducts } from '@/lib/catalog';
 
 export type RelatedProductsProps = {
-  /** The product on the page, left out of the list. */
-  productId: string;
-  /** Its category; products come from the same top-level category. */
-  categoryId: string;
+  /** Products left out of the list: the one on the page, or what's already in the bag. */
+  excludeProductIds: string[];
+  /**
+   * Products come from the same top-level categories as these.
+   * Empty means any category.
+   */
+  categoryIds: string[];
 };
 
-/** "You may also like": products from the same top-level category. Hidden when there are none. */
+/** "You may also like": products from the same top-level categories. Hidden when there are none. */
 export async function RelatedProducts({
-  productId,
-  categoryId,
+  excludeProductIds,
+  categoryIds,
 }: RelatedProductsProps) {
-  const products = await getRelatedProducts(productId, categoryId);
+  const products = await getRelatedProducts(excludeProductIds, categoryIds);
   if (products.length === 0) return null;
 
   return (
