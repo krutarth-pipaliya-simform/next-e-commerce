@@ -3,6 +3,8 @@ export {
   BagIcon,
   CheckIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
   GiftIcon,
@@ -18,5 +20,6 @@ export {
   StoreIcon,
   TruckIcon,
   UserIcon,
+  XIcon,
 } from './icons';
 export type { IconProps } from './icons';
