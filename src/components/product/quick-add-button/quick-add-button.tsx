@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { addToCart } from '@/actions/cart';
-import { PlusIcon } from '@/components/ui/icons';
+import { CheckIcon, PlusIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/utils';
 
 /**
  * "Quick add" for products without variants. Signed-out shoppers are
@@ -22,16 +23,33 @@ export function QuickAddButton({
 }: QuickAddButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<'added' | 'error' | null>(null);
   const [message, setMessage] = useState('');
 
+  // "Added" is a short confirmation; the button goes back to Quick add.
+  useEffect(() => {
+    if (result !== 'added') return;
+    const timer = setTimeout(() => setResult(null), 2500);
+    return () => clearTimeout(timer);
+  }, [result]);
+
   function handleClick() {
+    // Empty the live region first, so a second identical message is announced again.
+    setMessage('');
+    setResult(null);
     startTransition(async () => {
-      const result = await addToCart(productId);
-      if (result.error === 'Unauthorized') {
+      const response = await addToCart(productId);
+      if (response.error === 'Unauthorized') {
         router.push('/login');
         return;
       }
-      setMessage(result.error ?? `${productName} added to bag`);
+      if (response.error) {
+        setResult('error');
+        setMessage(`Couldn't add ${productName}. ${response.error}`);
+        return;
+      }
+      setResult('added');
+      setMessage(`${productName} added to bag`);
       router.refresh();
     });
   }
@@ -42,11 +60,24 @@ export function QuickAddButton({
         type="button"
         onClick={handleClick}
         disabled={pending}
-        aria-label={`Quick add ${productName}`}
-        className="glass-adaptive flex h-11 w-full items-center justify-center gap-1.5 rounded-control text-sm font-semibold text-ink disabled:opacity-60"
+        className={cn(
+          'glass-adaptive flex h-11 w-full items-center justify-center gap-1.5 rounded-control text-sm font-semibold disabled:opacity-60',
+          result === 'error' ? 'text-sale' : 'text-ink',
+        )}
       >
-        <PlusIcon width={16} height={16} />
-        {pending ? 'Adding…' : 'Quick add'}
+        {result === 'added' ? (
+          <CheckIcon width={16} height={16} />
+        ) : (
+          <PlusIcon width={16} height={16} />
+        )}
+        {pending
+          ? 'Adding…'
+          : result === 'added'
+            ? 'Added to bag'
+            : result === 'error'
+              ? "Couldn't add, try again"
+              : 'Quick add'}
+        <span className="sr-only">: {productName}</span>
       </button>
       <span role="status" className="sr-only">
         {message}

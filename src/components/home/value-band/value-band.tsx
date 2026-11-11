@@ -9,7 +9,7 @@ import {
 const values = [
   {
     icon: TruckIcon,
-    title: 'Free shipping over $50',
+    title: 'Free shipping over ₹999',
     text: 'Counts across every store in one order.',
   },
   {

@@ -3,12 +3,11 @@ import { Suspense } from 'react';
 import {
   BagIcon,
   HeartIcon,
-  MenuIcon,
   SearchIcon,
   UserIcon,
 } from '@/components/ui/icons';
-import { NavLinks } from '@/components/layout/nav-links';
-import { primaryLinks } from '@/components/layout/nav-links';
+import { MobileMenu } from '@/components/layout/mobile-menu';
+import { NavLinks, primaryLinks } from '@/components/layout/nav-links';
 import { Container } from '@/components/ui/container';
 import { auth } from '@/lib/auth';
 
@@ -47,11 +46,6 @@ async function AccountLink() {
   );
 }
 
-/**
- * The floating glass nav. Below 1024px the links move into a Menu
- * disclosure; below 640px search drops to its own full-width row.
- * Pass cartCount once the cart count is fetched in the layout.
- */
 export type SiteHeaderProps = {
   /**
    * Items in the bag, shown as a badge on the bag icon.
@@ -60,6 +54,11 @@ export type SiteHeaderProps = {
   cartCount?: number;
 };
 
+/**
+ * The floating glass nav. Below 1024px the links move into a Menu
+ * disclosure; below 640px search drops to its own full-width row.
+ * Pass cartCount once the cart count is fetched in the layout.
+ */
 export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
   return (
     <header className="sticky top-4 z-20 mt-4">
@@ -68,26 +67,7 @@ export function SiteHeader({ cartCount = 0 }: SiteHeaderProps) {
           aria-label="Main"
           className="glass-chrome flex h-16 items-center gap-2 rounded-control px-3 [--glass-blur:36px] sm:gap-4"
         >
-          <details className="group relative lg:hidden">
-            <summary
-              className={`${iconButton} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-            >
-              <MenuIcon />
-              <span className="sr-only">Menu</span>
-            </summary>
-            <ul className="glass-text absolute top-14 left-0 flex w-56 flex-col gap-1 rounded-panel p-2">
-              {primaryLinks.map(({ href, label }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className="flex h-11 items-center rounded-control px-3 font-medium hover:bg-sunken"
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <MobileMenu links={primaryLinks} buttonClassName={iconButton} />
 
           <Link
             href="/"

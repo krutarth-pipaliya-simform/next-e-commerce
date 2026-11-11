@@ -34,9 +34,7 @@ export function DashboardShell({
           <DashboardNav items={nav} rootHref={rootHref} />
         </nav>
         {footer && (
-          <div className="border-t border-hairline pt-3 max-lg:hidden">
-            {footer}
-          </div>
+          <div className="border-t border-hairline pt-3">{footer}</div>
         )}
       </aside>
       <div className="min-w-0 flex-1">{children}</div>

@@ -95,7 +95,7 @@ export function Hero({ products }: HeroProps) {
                 className="glass-chrome inline-flex h-11 shrink-0 items-center gap-2 rounded-control px-4 text-sm font-medium whitespace-nowrap"
               >
                 <GiftIcon width={16} height={16} />
-                Gifts under $50
+                Gifts under ₹2,000
               </Link>
             </div>
 
