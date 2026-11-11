@@ -726,23 +726,28 @@ export async function getSellerSummary(
 }
 
 /**
- * Products from the same top-level category, from any store, for
- * "You may also like". Featured first, then the newest.
+ * Products from the same top-level categories as `categoryIds`, from any
+ * store, for "You may also like". Featured first, then the newest. With no
+ * categories (an empty bag), any product qualifies.
  */
 export async function getRelatedProducts(
-  productId: string,
-  categoryId: string,
+  excludeIds: string[],
+  categoryIds: string[],
   limit = 4,
 ) {
   await connection();
   const categories = await allCategories();
-  const rootId = categoryTrail(categoryId, categories)[0]?.id ?? categoryId;
+  const inCategories = new Set(
+    categoryIds.flatMap((id) =>
+      withDescendants(categoryTrail(id, categories)[0]?.id ?? id, categories),
+    ),
+  );
 
   const rows = await db.product.findMany({
     where: {
       ...visibleProduct,
-      id: { not: productId },
-      categoryId: { in: withDescendants(rootId, categories) },
+      id: { notIn: excludeIds },
+      ...(categoryIds.length && { categoryId: { in: [...inCategories] } }),
     },
     select: cardSelect,
     orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],

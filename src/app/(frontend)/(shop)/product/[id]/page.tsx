@@ -107,8 +107,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="mt-16 sm:mt-24">
         <Suspense fallback={<Skeleton className="h-96 rounded-panel" />}>
           <RelatedProducts
-            productId={product.id}
-            categoryId={product.categoryId}
+            excludeProductIds={[product.id]}
+            categoryIds={[product.categoryId]}
           />
         </Suspense>
       </div>
