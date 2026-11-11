@@ -1,7 +1,10 @@
 export {
+  AlertCircleIcon,
   BagIcon,
   CheckIcon,
   ChevronDownIcon,
+  EyeIcon,
+  EyeOffIcon,
   GiftIcon,
   HeartIcon,
   LogOutIcon,
@@ -12,6 +15,7 @@ export {
   SearchIcon,
   ShieldIcon,
   StarIcon,
+  StoreIcon,
   TruckIcon,
   UserIcon,
 } from './icons';
