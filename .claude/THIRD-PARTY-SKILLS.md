@@ -1,6 +1,6 @@
 # Third-party skills
 
-Skills in `skills/` that were copied from other repositories, with their source commit and license. Skills not listed here (`git-workflow`, `scaffold-api`, `server-action`) belong to this project.
+Skills in `skills/` that were copied from other repositories, with their source commit and license. Skills not listed here (`create-component`, `git-workflow`, `scaffold-api`, `server-action`) belong to this project.
 
 ## Vendored skills from mattpocock/skills
 
