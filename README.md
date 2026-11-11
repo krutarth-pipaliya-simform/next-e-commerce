@@ -18,6 +18,7 @@ The storefront follows the "Daylight" design: a light, achromatic interface with
 - **Components** live in `src/components/`, one folder per component with an `index.ts`. Reusable pieces sit in `ui/`, others by feature (`layout/`, `product/`, `home/`). The `create-component` skill in `.claude/skills/` describes the conventions.
 - **Routes:** the shop, account, seller and admin pages sit under the `(shop)` route group with a shared header and footer. The home page reads live catalogue data; most other pages are still placeholders.
 - **Account menu** (`src/components/layout/account-menu/`): signed out, the header shows a "Sign in" link to the login page, which returns to the current page and links to sign-up. Signed in, it becomes a dropdown with the account pages, the seller or admin area for that role, and Log out.
+- **Shop listing** (`/products`): every visible product, 24 per page, with filters for category (including its subcategories), price range, variant size, store and colour, and sorting by featured, newest or price. All of it lives in the URL (`?category=&price=&size=&store=&color=&sort=&page=`), so a filtered view can be shared and works without JavaScript. `src/lib/listing.ts` reads the params and builds the links, and `getListing` and `getListingFacets` in `src/lib/catalog.ts` run the queries. Size and colour have to match on the same variant. The home page's category tiles and colour swatches link into these filters.
 - **Prices** are shown in Indian rupees (`formatPrice` in `src/lib/utils.ts`).
 
 ## Access control

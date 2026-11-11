@@ -1,6 +1,13 @@
 import { connection } from 'next/server';
+import { cache } from 'react';
 import type { Prisma } from '@/generated/prisma/client';
 import { db } from '@/lib/db';
+import {
+  PAGE_SIZE,
+  priceRanges,
+  type ListingFilters,
+  type SortKey,
+} from '@/lib/listing';
 
 /** A product shoppers may see: published, from an approved store that isn't suspended. */
 export const visibleProduct = {
@@ -226,5 +233,209 @@ export async function getFeaturedStores(limit = 3) {
         },
       ];
     }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Product listing (/products)
+// ---------------------------------------------------------------------------
+
+/** Every category, read once per request however many callers need it. */
+const allCategories = cache(() =>
+  db.category.findMany({
+    select: { id: true, name: true, slug: true, parentId: true },
+  }),
+);
+
+/** A category by slug, for titles. Undefined when no category has it. */
+export async function findCategory(slug: string) {
+  await connection();
+  const category = (await allCategories()).find((c) => c.slug === slug);
+  return category && { name: category.name, slug: category.slug };
+}
+
+/** The category's id plus the ids of everything filed under it. */
+function withDescendants(
+  rootId: string,
+  categories: { id: string; parentId: string | null }[],
+) {
+  const ids = new Set([rootId]);
+  // Walk down level by level; stops once a pass adds nothing, so a parent
+  // loop in bad data can't spin forever.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const category of categories) {
+      if (category.parentId && ids.has(category.parentId)) {
+        if (!ids.has(category.id)) {
+          ids.add(category.id);
+          grew = true;
+        }
+      }
+    }
+  }
+  return [...ids];
+}
+
+const SIZE_ORDER = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
+
+/** Clothing sizes in size order, then the rest (shoe sizes, "Kids") A–Z. */
+function compareSizes(a: string, b: string) {
+  const ai = SIZE_ORDER.indexOf(a.toLowerCase());
+  const bi = SIZE_ORDER.indexOf(b.toLowerCase());
+  if (ai !== -1 && bi !== -1) return ai - bi;
+  if (ai !== -1) return -1;
+  if (bi !== -1) return 1;
+  return a.localeCompare(b, 'en', { numeric: true });
+}
+
+/** Distinct values ignoring case, keeping the first spelling seen. */
+function distinctValues(values: (string | null)[]) {
+  const byKey = new Map<string, string>();
+  for (const value of values) {
+    const label = value?.trim();
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, label);
+  }
+  return [...byKey].map(([value, label]) => ({ value, label }));
+}
+
+export type ListingFacets = {
+  categories: { slug: string; name: string }[];
+  stores: { slug: string; name: string }[];
+  /** `value` is lower case for the URL; `label` keeps the seller's spelling. */
+  sizes: { value: string; label: string }[];
+  colors: { value: string; label: string }[];
+};
+
+/** The options the listing's filters offer, from what's actually for sale. */
+export async function getListingFacets(): Promise<ListingFacets> {
+  await connection();
+  const variantOfVisible = { product: visibleProduct };
+
+  const [categories, counts, stores, sizes, colors] = await Promise.all([
+    allCategories(),
+    db.product.groupBy({
+      by: ['categoryId'],
+      where: visibleProduct,
+      _count: { _all: true },
+    }),
+    db.store.findMany({
+      where: {
+        isApproved: true,
+        isSuspended: false,
+        products: { some: { isPublished: true } },
+      },
+      select: { slug: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    db.productVariant.findMany({
+      where: { ...variantOfVisible, size: { not: null } },
+      select: { size: true },
+      distinct: ['size'],
+    }),
+    db.productVariant.findMany({
+      where: { ...variantOfVisible, color: { not: null } },
+      select: { color: true },
+      distinct: ['color'],
+    }),
+  ]);
+
+  // Top-level categories that hold a visible product somewhere beneath them.
+  const stocked = new Set(counts.map((row) => row.categoryId));
+  const topLevel = categories
+    .filter(
+      (category) =>
+        !category.parentId &&
+        withDescendants(category.id, categories).some((id) => stocked.has(id)),
+    )
+    .map(({ slug, name }) => ({ slug, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    categories: topLevel,
+    stores,
+    sizes: distinctValues(sizes.map((row) => row.size)).sort((a, b) =>
+      compareSizes(a.label, b.label),
+    ),
+    colors: distinctValues(colors.map((row) => row.color)).sort((a, b) =>
+      a.label.localeCompare(b.label),
+    ),
+  };
+}
+
+const listingOrder: Record<SortKey, Prisma.ProductOrderByWithRelationInput[]> =
+  {
+    featured: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+    newest: [{ createdAt: 'desc' }],
+    'price-asc': [{ price: 'asc' }],
+    'price-desc': [{ price: 'desc' }],
+  };
+
+/**
+ * One page of visible products matching the filters, plus the total and
+ * how many stores they come from. A page past the end shows the last page.
+ */
+export async function getListing(filters: ListingFilters) {
+  await connection();
+
+  const categories = await allCategories();
+  const category = filters.category
+    ? categories.find((c) => c.slug === filters.category)
+    : undefined;
+  const range = priceRanges.find((r) => r.key === filters.price);
+
+  // Size and colour must match on the same variant: "M in Cobalt", not
+  // an M in one colour and Cobalt in another size.
+  const variant: Prisma.ProductVariantWhereInput[] = [];
+  if (filters.size)
+    variant.push({ size: { equals: filters.size, mode: 'insensitive' } });
+  if (filters.colors.length)
+    variant.push({
+      OR: filters.colors.map((color) => ({
+        color: { equals: color, mode: 'insensitive' },
+      })),
+    });
+
+  const where: Prisma.ProductWhereInput = {
+    ...visibleProduct,
+    ...(filters.store && {
+      store: { ...visibleProduct.store, slug: filters.store },
+    }),
+    // An unknown slug matches nothing, like an unknown store does.
+    ...(filters.category && {
+      categoryId: {
+        in: category ? withDescendants(category.id, categories) : [],
+      },
+    }),
+    ...(range && { price: { gte: range.min, lt: range.max } }),
+    ...(variant.length && { variants: { some: { AND: variant } } }),
+  };
+
+  const [total, storeRows] = await Promise.all([
+    db.product.count({ where }),
+    db.product.groupBy({ by: ['storeId'], where }),
+  ]);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(filters.page, pageCount);
+
+  const rows = await db.product.findMany({
+    where,
+    select: cardSelect,
+    // The id tiebreak keeps the order stable, so pages don't overlap.
+    orderBy: [...listingOrder[filters.sort], { id: 'asc' }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+
+  return {
+    products: await toCatalogProducts(rows),
+    total,
+    storeCount: storeRows.length,
+    page,
+    pageCount,
+    /** The matched category, so the page can title itself with it. */
+    category: category && { name: category.name, slug: category.slug },
   };
 }

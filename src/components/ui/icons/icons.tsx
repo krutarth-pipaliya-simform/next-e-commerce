@@ -73,6 +73,30 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </Stroke>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </Stroke>
+  );
+}
+
+export function XIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </Stroke>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <Stroke {...props}>
