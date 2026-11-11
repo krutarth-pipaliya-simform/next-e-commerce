@@ -273,3 +273,40 @@ export function LockIcon(props: IconProps) {
     </Stroke>
   );
 }
+
+export function CardIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <rect x="3" y="5.5" width="18" height="13" rx="2" />
+      <path d="M3 10h18M7 15h3" />
+    </Stroke>
+  );
+}
+
+export function CashIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <rect x="2.5" y="6.5" width="19" height="11" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 10v4M18 10v4" />
+    </Stroke>
+  );
+}
+
+export function InfoIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </Stroke>
+  );
+}
+
+export function PackageIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z" />
+      <path d="m4 7.5 8 4.5 8-4.5M12 12v9M8 5.25l8 4.5" />
+    </Stroke>
+  );
+}
