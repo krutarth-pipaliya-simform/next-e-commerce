@@ -1,4 +1,6 @@
 import { DashboardShell } from '@/components/layout/dashboard-shell';
+import { notFound } from 'next/navigation';
+import { getCurrentUser, hasRole } from '@/lib/authz';
 
 const nav = [
   { href: '/admin', label: 'Overview' },
@@ -6,13 +8,18 @@ const nav = [
   { href: '/admin/categories', label: 'Categories' },
 ];
 
-// Display only. Each admin page and Server Action must check for the
-// SUPER_ADMIN role itself; a layout check doesn't protect child routes.
-export default function AdminLayout({
+// This check only keeps the admin shell from rendering for other roles.
+// It doesn't protect child routes: each admin page calls requireRole and
+// each admin Server Action calls authorizeAction itself. Signed-out
+// visitors fall through so the page redirects with its own callbackUrl.
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentUser();
+  if (user && !hasRole(user, ['SUPER_ADMIN'])) notFound();
+
   return (
     <DashboardShell
       rootHref="/admin"

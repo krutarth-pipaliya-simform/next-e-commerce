@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { addToCart } from '@/actions/cart';
 import { CheckIcon, PlusIcon } from '@/components/ui/icons';
@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * "Quick add" for products without variants. Signed-out shoppers are
- * sent to /login, since addToCart returns { error: 'Unauthorized' }.
+ * sent to /login (and back here afterwards), since addToCart returns
+ * { error: 'Unauthorized' }.
  */
 export type QuickAddButtonProps = {
   /** The product to add, with no variant. */
@@ -22,6 +23,7 @@ export function QuickAddButton({
   productName,
 }: QuickAddButtonProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<'added' | 'error' | null>(null);
   const [message, setMessage] = useState('');
@@ -40,7 +42,7 @@ export function QuickAddButton({
     startTransition(async () => {
       const response = await addToCart(productId);
       if (response.error === 'Unauthorized') {
-        router.push('/login');
+        router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
         return;
       }
       if (response.error) {
