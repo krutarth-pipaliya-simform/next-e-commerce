@@ -8,6 +8,16 @@ A robust, multi-vendor e-commerce platform built with modern web technologies.
 - **Database:** PostgreSQL (via [Prisma Postgres](https://prisma.io/data-platform/postgres))
 - **ORM:** [Prisma v7](https://www.prisma.io/)
 - **Deployment:** [Prisma Compute](https://prisma.io/data-platform/compute) (Backend/Workers) & Cloudflare
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+
+## UI
+
+The storefront follows the "Daylight" design: a light, achromatic interface with liquid-glass controls, so product colours carry the page.
+
+- **Design tokens** (colours, fonts, radii) and the glass utilities (`glass-chrome`, `glass-text`, `glass-adaptive`) live in `@theme` in `src/app/(frontend)/globals.css`.
+- **Components** live in `src/components/`, one folder per component with an `index.ts`. Reusable pieces sit in `ui/`, others by feature (`layout/`, `product/`, `home/`). The `create-component` skill in `.claude/skills/` describes the conventions.
+- **Routes:** the shop, account, seller and admin pages sit under the `(shop)` route group with a shared header and footer. The home page reads live catalogue data; most other pages are still placeholders.
+- **Prices** are shown in Indian rupees (`formatPrice` in `src/lib/utils.ts`).
 
 ## Documentation
 
