@@ -40,7 +40,8 @@ function plural(count: number, one: string, many: string) {
 export default async function ProductsPage({
   searchParams,
 }: ProductsPageProps) {
-  const filters = parseListingParams(await searchParams);
+  // Search lives at /search; a stray ?q= here is ignored.
+  const filters = { ...parseListingParams(await searchParams), q: undefined };
   const [listing, facets] = await Promise.all([
     getListing(filters),
     getListingFacets(),

@@ -15,6 +15,12 @@ export type FilterBarProps = {
   filters: ListingFilters;
   /** What each filter can be set to. */
   facets: ListingFacets;
+  /**
+   * Shows the Category menu. Search hides it and offers category chips
+   * with result counts instead.
+   * @default true
+   */
+  showCategory?: boolean;
 };
 
 /**
@@ -22,7 +28,11 @@ export type FilterBarProps = {
  * swatches. Sticks under the header from 640px up; on phones the header
  * has its own search row, so the bar scrolls with the page.
  */
-export function FilterBar({ filters, facets }: FilterBarProps) {
+export function FilterBar({
+  filters,
+  facets,
+  showCategory = true,
+}: FilterBarProps) {
   const href = (changes: Partial<ListingFilters>) =>
     listingHref(filters, changes);
 
@@ -62,23 +72,25 @@ export function FilterBar({ filters, facets }: FilterBarProps) {
       className="glass-chrome relative z-10 flex flex-col gap-2.5 rounded-panel p-2 sm:sticky sm:top-24 sm:p-2.5"
     >
       <div className="-mx-2 flex items-center gap-2 overflow-x-auto px-2 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:flex-none">
-        <FilterMenu
-          label="Category"
-          value={labelOf(categories, filters.category, 'All')}
-          active={Boolean(filters.category)}
-          options={[
-            {
-              label: 'All',
-              href: href({ category: undefined }),
-              selected: !filters.category,
-            },
-            ...categories.map((c) => ({
-              label: c.label,
-              href: href({ category: c.value }),
-              selected: c.value === filters.category,
-            })),
-          ]}
-        />
+        {showCategory && (
+          <FilterMenu
+            label="Category"
+            value={labelOf(categories, filters.category, 'All')}
+            active={Boolean(filters.category)}
+            options={[
+              {
+                label: 'All',
+                href: href({ category: undefined }),
+                selected: !filters.category,
+              },
+              ...categories.map((c) => ({
+                label: c.label,
+                href: href({ category: c.value }),
+                selected: c.value === filters.category,
+              })),
+            ]}
+          />
+        )}
         <FilterMenu
           label="Price"
           value={

@@ -6,6 +6,9 @@
 
 export const PAGE_SIZE = 24;
 
+/** Longer queries are cut to this many characters. */
+const MAX_QUERY_LENGTH = 100;
+
 export const priceRanges = [
   { key: 'under-1000', label: 'Under ₹1,000', min: 0, max: 1000 },
   { key: '1000-2500', label: '₹1,000 – ₹2,500', min: 1000, max: 2500 },
@@ -25,6 +28,8 @@ export type PriceKey = (typeof priceRanges)[number]['key'];
 export type SortKey = (typeof sortOptions)[number]['key'];
 
 export type ListingFilters = {
+  /** Search text. When set, links go to `/search` instead of `/products`. */
+  q?: string;
   /** Category slug; matches the category and all its subcategories. */
   category?: string;
   price?: PriceKey;
@@ -65,7 +70,14 @@ export function parseListingParams(params: SearchParams): ListingFilters {
     .map((color) => color.trim().toLowerCase())
     .filter(Boolean);
 
+  // Collapse runs of whitespace so "  pink   lamp " and "pink lamp" match.
+  const q = first(params.q)
+    ?.replace(/\s+/g, ' ')
+    .slice(0, MAX_QUERY_LENGTH)
+    .trim();
+
   return {
+    q: q || undefined,
     category: first(params.category)?.toLowerCase(),
     price: isPriceKey(price) ? price : undefined,
     size: first(params.size)?.toLowerCase(),
@@ -77,8 +89,9 @@ export function parseListingParams(params: SearchParams): ListingFilters {
 }
 
 /**
- * A `/products` link with `changes` applied to `filters`. Any change other
- * than the page goes back to page 1. Defaults are left out of the URL.
+ * A listing link with `changes` applied to `filters`: `/search` when there's
+ * a query, `/products` otherwise. Any change other than the page goes back
+ * to page 1. Defaults are left out of the URL.
  */
 export function listingHref(
   filters: ListingFilters,
@@ -90,6 +103,7 @@ export function listingHref(
     ...changes,
   };
   const params = new URLSearchParams();
+  if (next.q) params.set('q', next.q);
   if (next.category) params.set('category', next.category);
   if (next.price) params.set('price', next.price);
   if (next.size) params.set('size', next.size);
@@ -98,8 +112,9 @@ export function listingHref(
   if (next.sort !== 'featured') params.set('sort', next.sort);
   if (next.page > 1) params.set('page', String(next.page));
 
+  const path = next.q ? '/search' : '/products';
   const query = params.toString();
-  return query ? `/products?${query}` : '/products';
+  return query ? `${path}?${query}` : path;
 }
 
 /** Adds the colour if it isn't selected, removes it if it is. */
@@ -109,7 +124,7 @@ export function toggleColour(colors: string[], color: string) {
     : [...colors, color];
 }
 
-/** The changes that remove every filter, keeping the sort. */
+/** The changes that remove every filter, keeping the search and sort. */
 export const clearedFilters = {
   category: undefined,
   price: undefined,
@@ -127,7 +142,7 @@ export function labelFromValue(value: string) {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** True when any filter is set. Sort and page don't count. */
+/** True when any filter is set. Search, sort and page don't count. */
 export function hasFilters(filters: ListingFilters) {
   return Boolean(
     filters.category ||

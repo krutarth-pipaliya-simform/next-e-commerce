@@ -15,6 +15,46 @@ export const visibleProduct = {
   store: { isApproved: true, isSuspended: false },
 } satisfies Prisma.ProductWhereInput;
 
+/** Every category, read once per request however many callers need it. */
+const allCategories = cache(() =>
+  db.category.findMany({
+    select: { id: true, name: true, slug: true, parentId: true },
+  }),
+);
+
+/**
+ * Search terms: up to 8 distinct words, so a pasted paragraph stays cheap.
+ * Prisma passes `contains` straight into ILIKE, so `%`, `_` and `\` are
+ * escaped to match themselves instead of acting as wildcards.
+ */
+function searchTerms(q: string) {
+  return [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))]
+    .slice(0, 8)
+    .map((term) => term.replace(/[\\%_]/g, '\\$&'));
+}
+
+/**
+ * Products matching every word of the query, each word found in the name,
+ * description, store, category or a variant colour. Case-insensitive.
+ */
+function searchWhere(q: string | undefined): Prisma.ProductWhereInput {
+  if (!q) return {};
+  return {
+    AND: searchTerms(q).map((term) => {
+      const contains = { contains: term, mode: 'insensitive' } as const;
+      return {
+        OR: [
+          { name: contains },
+          { description: contains },
+          { store: { name: contains } },
+          { category: { name: contains } },
+          { variants: { some: { color: contains } } },
+        ],
+      };
+    }),
+  };
+}
+
 const cardSelect = {
   id: true,
   name: true,
@@ -106,17 +146,16 @@ export async function getTrendingProducts(limit = 8) {
 /**
  * Top-level categories with how many visible products each holds,
  * counting products filed under any of its subcategories too.
- * Categories with nothing to show are left out.
+ * Categories with nothing to show are left out. Pass `q` to count only
+ * the products matching a search.
  */
-export async function getCategories(limit = 7) {
+export async function getCategories(limit = 7, q?: string) {
   await connection();
   const [categories, counts] = await Promise.all([
-    db.category.findMany({
-      select: { id: true, name: true, slug: true, parentId: true },
-    }),
+    allCategories(),
     db.product.groupBy({
       by: ['categoryId'],
-      where: visibleProduct,
+      where: { ...visibleProduct, ...searchWhere(q) },
       _count: { _all: true },
     }),
   ]);
@@ -139,14 +178,15 @@ export async function getCategories(limit = 7) {
     if (root) totals.set(root.id, (totals.get(root.id) ?? 0) + row._count._all);
   }
 
-  return categories
-    .filter((category) => !category.parentId && totals.has(category.id))
-    .map(({ id, name, slug }) => ({
-      id,
-      name,
-      slug,
-      productCount: totals.get(id) ?? 0,
-    }))
+  // Built from the totals so every counted product lands in some category,
+  // even one stuck in a parent loop; search sums these for its result count.
+  return [...totals]
+    .flatMap(([id, productCount]) => {
+      const category = byId.get(id);
+      return category
+        ? [{ id, name: category.name, slug: category.slug, productCount }]
+        : [];
+    })
     .sort((a, b) => b.productCount - a.productCount)
     .slice(0, limit);
 }
@@ -240,13 +280,6 @@ export async function getFeaturedStores(limit = 3) {
 // Product listing (/products)
 // ---------------------------------------------------------------------------
 
-/** Every category, read once per request however many callers need it. */
-const allCategories = cache(() =>
-  db.category.findMany({
-    select: { id: true, name: true, slug: true, parentId: true },
-  }),
-);
-
 /** A category by slug, for titles. Undefined when no category has it. */
 export async function findCategory(slug: string) {
   await connection();
@@ -309,23 +342,27 @@ export type ListingFacets = {
   colors: { value: string; label: string }[];
 };
 
-/** The options the listing's filters offer, from what's actually for sale. */
-export async function getListingFacets(): Promise<ListingFacets> {
+/**
+ * The options the listing's filters offer, from what's actually for sale.
+ * Pass `q` to offer only what the search found.
+ */
+export async function getListingFacets(q?: string): Promise<ListingFacets> {
   await connection();
-  const variantOfVisible = { product: visibleProduct };
+  const matching = { ...visibleProduct, ...searchWhere(q) };
+  const variantOfVisible = { product: matching };
 
   const [categories, counts, stores, sizes, colors] = await Promise.all([
     allCategories(),
     db.product.groupBy({
       by: ['categoryId'],
-      where: visibleProduct,
+      where: matching,
       _count: { _all: true },
     }),
     db.store.findMany({
       where: {
         isApproved: true,
         isSuspended: false,
-        products: { some: { isPublished: true } },
+        products: { some: { isPublished: true, ...searchWhere(q) } },
       },
       select: { slug: true, name: true },
       orderBy: { name: 'asc' },
@@ -400,6 +437,7 @@ export async function getListing(filters: ListingFilters) {
 
   const where: Prisma.ProductWhereInput = {
     ...visibleProduct,
+    ...searchWhere(filters.q),
     ...(filters.store && {
       store: { ...visibleProduct.store, slug: filters.store },
     }),
@@ -438,4 +476,66 @@ export async function getListing(filters: ListingFilters) {
     /** The matched category, so the page can title itself with it. */
     category: category && { name: category.name, slug: category.slug },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Search (/search)
+// ---------------------------------------------------------------------------
+
+export type SearchStore = {
+  slug: string;
+  name: string;
+  /** Visible products from this store that match the search. */
+  matchCount: number;
+};
+
+/**
+ * Stores for a search: the ones with the most matching products, then
+ * stores whose name matches but whose products don't.
+ */
+export async function getSearchStores(q: string, limit = 3) {
+  await connection();
+  const liveStore = { isApproved: true, isSuspended: false };
+
+  const ranked = await db.product.groupBy({
+    by: ['storeId'],
+    where: { ...visibleProduct, ...searchWhere(q) },
+    _count: { _all: true },
+    orderBy: { _count: { storeId: 'desc' } },
+    take: limit,
+  });
+  const rankedIds = ranked.map((row) => row.storeId);
+
+  const [withProducts, byName] = await Promise.all([
+    db.store.findMany({
+      where: { id: { in: rankedIds } },
+      select: { id: true, slug: true, name: true },
+    }),
+    rankedIds.length < limit
+      ? db.store.findMany({
+          where: {
+            ...liveStore,
+            id: { notIn: rankedIds },
+            products: { some: { isPublished: true } },
+            AND: searchTerms(q).map((term) => ({
+              name: { contains: term, mode: 'insensitive' as const },
+            })),
+          },
+          select: { id: true, slug: true, name: true },
+          orderBy: { name: 'asc' },
+          take: limit - rankedIds.length,
+        })
+      : [],
+  ]);
+
+  const storeById = new Map(withProducts.map((store) => [store.id, store]));
+  const stores: SearchStore[] = ranked.flatMap((row) => {
+    const store = storeById.get(row.storeId);
+    return store
+      ? [{ slug: store.slug, name: store.name, matchCount: row._count._all }]
+      : [];
+  });
+  for (const store of byName)
+    stores.push({ slug: store.slug, name: store.name, matchCount: 0 });
+  return stores;
 }
