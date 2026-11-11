@@ -21,6 +21,10 @@ export type BagLine = {
   image?: { url: string; altText: string | null };
   /** Colour and size as the seller spelled them, e.g. "Tangerine · 9". */
   options: string | null;
+  /** The variant's fields, snapshotted onto the order item at checkout. */
+  size: string | null;
+  color: string | null;
+  sku: string | null;
   /** Base price plus the variant's price difference, in rupees. */
   unitPrice: number;
   quantity: number;
@@ -102,6 +106,7 @@ export async function getBag(userId: string): Promise<Bag> {
           id: true,
           size: true,
           color: true,
+          sku: true,
           stock: true,
           priceDiff: true,
         },
@@ -148,6 +153,9 @@ export async function getBag(userId: string): Promise<Bag> {
         [variant?.color?.trim(), variant?.size?.trim()]
           .filter(Boolean)
           .join(' · ') || null,
+      size: variant?.size ?? null,
+      color: variant?.color ?? null,
+      sku: variant?.sku ?? null,
       unitPrice: unitPaise / 100,
       quantity: item.quantity,
       lineTotal: (unitPaise * item.quantity) / 100,

@@ -128,6 +128,7 @@ model Product {
   reviews       Review[]
   cartItems     CartItem[]
   wishlistItems WishlistItem[]
+  orderItems    OrderItem[]
 
   @@index([storeId])
   @@index([categoryId])
@@ -184,6 +185,8 @@ model Address {
   id        String  @id @default(cuid())
   userId    String
   label     String? // e.g., "Home", "Office"
+  fullName  String  // Who receives the parcel
+  phone     String  // For the courier, e.g. "+91 98765 43210"
   street    String
   city      String
   state     String
@@ -225,8 +228,12 @@ model CartItem {
 model Order {
   id            String        @id @default(cuid())
   userId        String
-  totalAmount   Decimal       @db.Decimal(10, 2)
+  subTotal      Decimal       @db.Decimal(10, 2) // Items only, before shipping
+  shippingTotal Decimal       @db.Decimal(10, 2) // Sum of the StoreOrder shipping fees
+  totalAmount   Decimal       @db.Decimal(10, 2) // subTotal + shippingTotal
+  paymentMethod PaymentMethod
   paymentStatus PaymentStatus @default(PENDING)
+  cardLast4     String?       // Last 4 digits of a simulated card payment, never the full number
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -237,6 +244,7 @@ model Order {
   shippingState   String
   shippingZipCode String
   shippingCountry String
+  shippingPhone   String
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   storeOrders StoreOrder[]
@@ -246,12 +254,14 @@ model Order {
 
 // Store Order: The seller's portion of the order to fulfill
 model StoreOrder {
-  id       String      @id @default(cuid())
-  orderId  String
-  storeId  String
-  status   OrderStatus @default(PENDING)
-  subTotal Decimal     @db.Decimal(10, 2)
-  couponId String?
+  id            String        @id @default(cuid())
+  orderId       String
+  storeId       String
+  status        OrderStatus   @default(PENDING)
+  subTotal      Decimal       @db.Decimal(10, 2) // This store's items, before shipping
+  deliverySpeed DeliverySpeed @default(STANDARD)
+  shippingFee   Decimal       @default(0) @db.Decimal(10, 2) // What this store's parcel cost to ship
+  couponId      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,7 +280,8 @@ model OrderItem {
   id           String  @id @default(cuid())
   storeOrderId String
 
-  // Live reference (nullable if variant deleted later)
+  // Live references (null once the product or variant is deleted)
+  productId        String?
   productVariantId String?
 
   // Snapshots — preserved forever even if product/variant is deleted
@@ -282,15 +293,27 @@ model OrderItem {
   sku      String?                   // Variant SKU at time of purchase
 
   storeOrder StoreOrder      @relation(fields: [storeOrderId], references: [id], onDelete: Cascade)
+  product    Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant    ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
 
   @@index([storeOrderId])
+  @@index([productId])
 }
 
 enum PaymentStatus {
   PENDING
   PAID
   FAILED
+}
+
+enum PaymentMethod {
+  CARD
+  CASH_ON_DELIVERY
+}
+
+enum DeliverySpeed {
+  STANDARD
+  EXPRESS
 }
 
 enum OrderStatus {

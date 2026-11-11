@@ -115,8 +115,10 @@ Saved shipping addresses for users.
 - `id`: Unique identifier.
 - `userId`: Links to the `User` who saved the address.
 - `label`: E.g., "Home", "Office".
-- `street`, `city`, `state`, `zipCode`, `country`: Physical location details.
-- `isDefault`: Whether this should be auto-selected at checkout.
+- `fullName`: Who receives the parcel.
+- `phone`: A mobile number for the courier, stored normalised (e.g. `+91 98765 43210`).
+- `street`, `city`, `state`, `zipCode`, `country`: Physical location details. Checkout ships within India only, so `zipCode` holds a 6-digit PIN code.
+- `isDefault`: Whether this should be auto-selected at checkout. The first address saved from checkout becomes the default.
 
 ### `Cart` & `CartItem`
 
@@ -135,9 +137,13 @@ The overarching receipt representing a single customer checkout, which may conta
 
 - `id`: Unique identifier.
 - `userId`: The customer who placed the order.
-- `totalAmount`: The grand total paid by the customer.
-- `paymentStatus`: E.g., PENDING, PAID, FAILED.
-- `shippingName`, `shippingStreet`, etc.: Snapshots of the shipping address at the time of checkout. We do not use foreign keys here so that if a user deletes their saved address, historical orders are not broken.
+- `subTotal`: The items, before shipping.
+- `shippingTotal`: The sum of every `StoreOrder.shippingFee`.
+- `totalAmount`: The grand total the customer pays (`subTotal + shippingTotal`). Prices include GST, so there is no separate tax field.
+- `paymentMethod`: Enum (`CARD`, `CASH_ON_DELIVERY`).
+- `paymentStatus`: Enum (`PENDING`, `PAID`, `FAILED`). A simulated card payment is `PAID` straight away; pay on delivery stays `PENDING`.
+- `cardLast4`: The last 4 digits of a card payment, shown on the receipt. The full card number is never stored. Null for pay on delivery.
+- `shippingName`, `shippingStreet`, `shippingCity`, `shippingState`, `shippingZipCode`, `shippingCountry`, `shippingPhone`: Snapshots of the shipping address at the time of checkout. We do not use foreign keys here so that if a user deletes their saved address, historical orders are not broken.
 
 ### `StoreOrder` (Seller's Portion)
 
@@ -147,7 +153,9 @@ Because this is a multi-vendor platform, a single `Order` is split into multiple
 - `orderId`: Links to the parent `Order`.
 - `storeId`: Links to the `Store` that needs to fulfill this part of the order.
 - `status`: E.g., PENDING, SHIPPED, DELIVERED. Allows each seller to ship at their own pace.
-- `subTotal`: The amount of money owed to this specific store.
+- `subTotal`: The amount of money owed to this specific store, before shipping.
+- `deliverySpeed`: Enum (`STANDARD`, `EXPRESS`), picked per store parcel at checkout.
+- `shippingFee`: What this store's parcel cost to ship. Standard is free when the whole order reaches the free-shipping minimum, else a flat fee per parcel; express adds a surcharge on top (see `src/lib/cart-rules.ts`).
 - `couponId`: Links to any store-specific discount used.
 
 ### `OrderItem`
@@ -156,6 +164,7 @@ The actual products purchased within a `StoreOrder`.
 
 - `id`: Unique identifier.
 - `storeOrderId`: Links to the parent `StoreOrder`.
+- `productId`: Live reference to the product, for its photo and page link (becomes null if the seller deletes the product).
 - `productVariantId`: Live reference to the variant (can become null if the seller deletes the variant).
 - `name`, `price`, `quantity`, `size`, `color`, `sku`: Snapshots of the product details at the exact moment of purchase. This ensures the receipt remains accurate even if the seller changes the product price or name later.
 
