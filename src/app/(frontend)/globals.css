@@ -1,1 +1,136 @@
 @import 'tailwindcss';
+
+/*
+ * Daylight design tokens. Utilities come from these names, e.g. bg-ground,
+ * text-ink, text-muted, border-hairline, rounded-panel, font-display.
+ * The UI chrome stays achromatic so product colours carry the page.
+ */
+@theme {
+  --color-ground: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-sunken: #eceef1;
+
+  --color-ink: #111214;
+  --color-ink-hover: #2a2c31;
+  --color-body: #474a52;
+  --color-muted: #62666f;
+
+  /* Text on ink (#111214) panels, e.g. the sell banner. */
+  --color-on-ink: #e6e7ea;
+  --color-on-ink-muted: #c9cbd1;
+
+  --color-hairline: rgb(17 18 20 / 0.08);
+  --color-divider: rgb(17 18 20 / 0.14);
+
+  --color-accent: #2b59e6;
+  --color-sale: #b43c0c;
+  --color-stock: #0f7a4a;
+  --color-pending-bg: #f5c2421f;
+  --color-pending: #7a5600;
+
+  /* Set on <html> by next/font in the root layout. */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
+  --radius-panel: 16px;
+  --radius-card: 14px;
+  --radius-stage: 12px;
+  --radius-control: 12px;
+  --radius-chip: 8px;
+
+  --shadow-glass:
+    inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 -1px 0 rgb(17 18 20 / 0.04),
+    0 10px 30px rgb(17 18 20 / 0.08), 0 1px 2px rgb(17 18 20 / 0.06);
+}
+
+/*
+ * Light liquid glass. Use it only on the control layer (nav, filters,
+ * chips, sticky bars, drawers); dense content sits on opaque bg-surface.
+ */
+@utility glass-chrome {
+  background-color: rgb(255 255 255 / 0.62);
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.55) 0%,
+    rgb(255 255 255 / 0) 45%
+  );
+  border: 1px solid rgb(255 255 255 / 0.75);
+  box-shadow: var(--shadow-glass);
+  /* Set --glass-blur on an element to blur more or less, e.g. [--glass-blur:36px]. */
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px)) saturate(180%);
+  backdrop-filter: blur(var(--glass-blur, 24px)) saturate(180%);
+}
+
+/* Glass that holds more than one line of text (drawers, buy panel). */
+@utility glass-text {
+  background-color: rgb(255 255 255 / 0.82);
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.55) 0%,
+    rgb(255 255 255 / 0) 45%
+  );
+  border: 1px solid rgb(255 255 255 / 0.75);
+  box-shadow: var(--shadow-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+/*
+ * Glass floating over a product. Set --tint to the product colour
+ * (style={{ '--tint': '#ff6a2b' }}) and the glass picks up a faint wash of it.
+ */
+@utility glass-adaptive {
+  background-color: rgb(255 255 255 / 0.58);
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tint, #ffffff) 15%, transparent) 0%,
+    color-mix(in srgb, var(--tint, #ffffff) 5%, transparent) 100%
+  );
+  border: 1px solid rgb(255 255 255 / 0.8);
+  box-shadow: var(--shadow-glass);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* Seamless white studio sweep behind product images. */
+@utility stage {
+  background: radial-gradient(
+    120% 90% at 50% 35%,
+    #ffffff 0%,
+    #f6f7f8 55%,
+    #e9ebee 100%
+  );
+}
+
+/* Browsers without backdrop-filter get a near-opaque surface instead. */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass-chrome,
+  .glass-text,
+  .glass-adaptive {
+    background-color: rgb(255 255 255 / 0.94);
+  }
+}
+
+@layer base {
+  html {
+    overflow-x: clip;
+  }
+
+  body {
+    background-color: var(--color-ground);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: var(--color-muted);
+  }
+}
