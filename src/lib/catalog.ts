@@ -22,9 +22,15 @@ const allCategories = cache(() =>
   }),
 );
 
-/** Search terms: up to 8 distinct words, so a pasted paragraph stays cheap. */
+/**
+ * Search terms: up to 8 distinct words, so a pasted paragraph stays cheap.
+ * Prisma passes `contains` straight into ILIKE, so `%`, `_` and `\` are
+ * escaped to match themselves instead of acting as wildcards.
+ */
 function searchTerms(q: string) {
-  return [...new Set(q.toLowerCase().split(' ').filter(Boolean))].slice(0, 8);
+  return [...new Set(q.toLowerCase().split(/\s+/).filter(Boolean))]
+    .slice(0, 8)
+    .map((term) => term.replace(/[\\%_]/g, '\\$&'));
 }
 
 /**
@@ -172,14 +178,15 @@ export async function getCategories(limit = 7, q?: string) {
     if (root) totals.set(root.id, (totals.get(root.id) ?? 0) + row._count._all);
   }
 
-  return categories
-    .filter((category) => !category.parentId && totals.has(category.id))
-    .map(({ id, name, slug }) => ({
-      id,
-      name,
-      slug,
-      productCount: totals.get(id) ?? 0,
-    }))
+  // Built from the totals so every counted product lands in some category,
+  // even one stuck in a parent loop; search sums these for its result count.
+  return [...totals]
+    .flatMap(([id, productCount]) => {
+      const category = byId.get(id);
+      return category
+        ? [{ id, name: category.name, slug: category.slug, productCount }]
+        : [];
+    })
     .sort((a, b) => b.productCount - a.productCount)
     .slice(0, limit);
 }
