@@ -105,6 +105,14 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+export function MinusIcon(props: IconProps) {
+  return (
+    <Stroke {...props}>
+      <path d="M5 12h14" />
+    </Stroke>
+  );
+}
+
 export function LogOutIcon(props: IconProps) {
   return (
     <Stroke {...props}>

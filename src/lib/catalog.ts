@@ -539,3 +539,214 @@ export async function getSearchStores(q: string, limit = 3) {
     stores.push({ slug: store.slug, name: store.name, matchCount: 0 });
   return stores;
 }
+
+// ---------------------------------------------------------------------------
+// Product page (/product/[id])
+// ---------------------------------------------------------------------------
+
+const productSelect = {
+  id: true,
+  name: true,
+  description: true,
+  price: true,
+  categoryId: true,
+  store: {
+    select: { id: true, name: true, slug: true, isApproved: true },
+  },
+  images: {
+    select: { id: true, url: true, altText: true },
+    orderBy: [{ isPrimary: 'desc' }, { id: 'asc' }],
+  },
+  variants: {
+    select: { id: true, size: true, color: true, stock: true, priceDiff: true },
+    orderBy: { id: 'asc' },
+  },
+} satisfies Prisma.ProductSelect;
+
+export type ProductVariantOption = {
+  id: string;
+  /** Lower-case size, or null when variants don't vary by size. */
+  size: string | null;
+  /** Lower-case colour, or null when variants don't vary by colour. */
+  color: string | null;
+  stock: number;
+  /** Price difference from the base price, as a decimal string. */
+  priceDiff: string;
+};
+
+/** The trail from the top-level category down to this one. */
+function categoryTrail(
+  id: string,
+  categories: {
+    id: string;
+    name: string;
+    slug: string;
+    parentId: string | null;
+  }[],
+) {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const trail: { id: string; name: string; slug: string }[] = [];
+  const seen = new Set<string>();
+  let category = byId.get(id);
+  // The seen set guards against a parent loop in bad data.
+  while (category && !seen.has(category.id)) {
+    seen.add(category.id);
+    trail.unshift({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+    });
+    category = category.parentId ? byId.get(category.parentId) : undefined;
+  }
+  return trail;
+}
+
+/**
+ * A product shoppers may see, with everything the product page shows
+ * above the fold. Null when it doesn't exist or isn't visible. Cached per
+ * request, so metadata and the page share one query.
+ */
+export const getProduct = cache(async (id: string) => {
+  await connection();
+  const [row, categories] = await Promise.all([
+    db.product.findFirst({
+      where: { id, ...visibleProduct },
+      select: productSelect,
+    }),
+    allCategories(),
+  ]);
+  if (!row) return null;
+
+  const variants: ProductVariantOption[] = row.variants.map((variant) => ({
+    id: variant.id,
+    size: variant.size?.trim().toLowerCase() || null,
+    color: variant.color?.trim().toLowerCase() || null,
+    stock: variant.stock,
+    priceDiff: variant.priceDiff.toString(),
+  }));
+
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    price: row.price.toString(),
+    categoryId: row.categoryId,
+    categories: categoryTrail(row.categoryId, categories),
+    // Only approved stores reach this page, and approval is the verification step.
+    store: {
+      id: row.store.id,
+      name: row.store.name,
+      slug: row.store.slug,
+      verified: row.store.isApproved,
+    },
+    images: row.images,
+    variants,
+    /** `value` matches the variants' lower-case colour; `label` keeps the seller's spelling. */
+    colours: distinctValues(row.variants.map((variant) => variant.color)),
+    sizes: distinctValues(row.variants.map((variant) => variant.size)).sort(
+      (a, b) => compareSizes(a.label, b.label),
+    ),
+  };
+});
+
+export type ProductDetail = NonNullable<Awaited<ReturnType<typeof getProduct>>>;
+
+/** Average rating, review count and how many reviews gave each star rating. */
+export const getReviewSummary = cache(async (productId: string) => {
+  await connection();
+  const rows = await db.review.groupBy({
+    by: ['rating'],
+    where: { productId },
+    _count: { _all: true },
+  });
+  const counts = new Map(rows.map((row) => [row.rating, row._count._all]));
+  const breakdown = [5, 4, 3, 2, 1].map((stars) => ({
+    stars,
+    count: counts.get(stars) ?? 0,
+  }));
+  const count = breakdown.reduce((sum, row) => sum + row.count, 0);
+  const total = breakdown.reduce((sum, row) => sum + row.stars * row.count, 0);
+  return { average: count ? total / count : 0, count, breakdown };
+});
+
+/** The newest reviews of a product, with the reviewer's name. */
+export async function getReviews(productId: string, limit = 6) {
+  await connection();
+  return db.review.findMany({
+    where: { productId },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      user: { select: { name: true } },
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    take: limit,
+  });
+}
+
+/**
+ * The selling store for the product page: its description, rating across
+ * published products, product count, and a few other products from it.
+ */
+export async function getSellerSummary(
+  storeId: string,
+  excludeProductId: string,
+  limit = 3,
+) {
+  await connection();
+  const publishedProduct = { storeId, isPublished: true };
+  const [store, productCount, rating, others] = await Promise.all([
+    db.store.findUnique({
+      where: { id: storeId },
+      select: { description: true, createdAt: true },
+    }),
+    db.product.count({ where: publishedProduct }),
+    db.review.aggregate({
+      where: { product: publishedProduct },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+    db.product.findMany({
+      where: { ...visibleProduct, storeId, id: { not: excludeProductId } },
+      select: cardSelect,
+      orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
+      take: limit,
+    }),
+  ]);
+
+  return {
+    description: store?.description ?? null,
+    since: store?.createdAt.getFullYear(),
+    productCount,
+    rating: { average: rating._avg.rating ?? 0, count: rating._count._all },
+    products: await toCatalogProducts(others),
+  };
+}
+
+/**
+ * Products from the same top-level category, from any store, for
+ * "You may also like". Featured first, then the newest.
+ */
+export async function getRelatedProducts(
+  productId: string,
+  categoryId: string,
+  limit = 4,
+) {
+  await connection();
+  const categories = await allCategories();
+  const rootId = categoryTrail(categoryId, categories)[0]?.id ?? categoryId;
+
+  const rows = await db.product.findMany({
+    where: {
+      ...visibleProduct,
+      id: { not: productId },
+      categoryId: { in: withDescendants(rootId, categories) },
+    },
+    select: cardSelect,
+    orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
+    take: limit,
+  });
+  return toCatalogProducts(rows);
+}

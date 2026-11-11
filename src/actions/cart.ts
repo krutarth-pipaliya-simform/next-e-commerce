@@ -1,6 +1,7 @@
 'use server';
 
 import { authorizeAction } from '@/lib/authz';
+import { visibleProduct } from '@/lib/catalog';
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
@@ -46,9 +47,24 @@ export async function addToCart(
   const userId = await getUserId();
   if (!userId) return { error: 'Unauthorized' };
 
-  if (quantity <= 0) return { error: 'Invalid quantity' };
+  if (!Number.isInteger(quantity) || quantity <= 0)
+    return { error: 'Invalid quantity' };
 
   try {
+    // Only products shoppers can see, and only a variant of that product.
+    // A product with variants needs one picked.
+    const product = await db.product.findFirst({
+      where: { id: productId, ...visibleProduct },
+      select: { variants: { select: { id: true } } },
+    });
+    if (!product) return { error: 'This product is no longer available' };
+    if (productVariantId) {
+      if (!product.variants.some((v) => v.id === productVariantId))
+        return { error: 'That option is not available' };
+    } else if (product.variants.length > 0) {
+      return { error: 'Choose an option first' };
+    }
+
     // Ensure cart exists
     let cart = await db.cart.findUnique({ where: { userId } });
     if (!cart) {
