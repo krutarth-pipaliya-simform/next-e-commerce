@@ -20,6 +20,7 @@ The storefront follows the "Daylight" design: a light, achromatic interface with
 - **Account menu** (`src/components/layout/account-menu/`): signed out, the header shows a "Sign in" link to the login page, which returns to the current page and links to sign-up. Signed in, it becomes a dropdown with the account pages, the seller or admin area for that role, and Log out.
 - **Shop listing** (`/products`): every visible product, 24 per page, with filters for category (including its subcategories), price range, variant size, store and colour, and sorting by featured, newest or price. All of it lives in the URL (`?category=&price=&size=&store=&color=&sort=&page=`), so a filtered view can be shared and works without JavaScript. `src/lib/listing.ts` reads the params and builds the links, and `getListing` and `getListingFacets` in `src/lib/catalog.ts` run the queries. Size and colour have to match on the same variant. The home page's category tiles and colour swatches link into these filters.
 - **Search** (`/search?q=`): the header search box submits here. Each word of the query has to appear in a product's name, description, store, category or variant colour (case-insensitive, up to 8 words). The page shows matching stores (the ones with the most matching products, then stores whose name holds every word), "In categories" chips with counts, and the same filters, sort and pagination as the listing, with the filter options narrowed to what the search found. When nothing matches, it suggests a shorter query and shows categories to browse instead. An empty query redirects to `/products`, and result pages are `noindex`.
+- **Product page** (`/product/[id]`): an image gallery and a buy panel with colour and size pickers built from the product's variants. Each option shows its stock, the price adds the variant's `priceDiff`, quantity is capped at the stock (at most 10), and Add to bag calls `addToCart`. Signed-out shoppers go to the login page and come back. Below the fold are the description and details, the seller card with more from the store, the reviews (average, star breakdown, newest 6) and "You may also like" from the same top-level category. The seller, reviews and related sections stream in through Suspense. A product that's unpublished, or from a store that isn't approved or is suspended, returns 404. `addToCart` now rejects products shoppers can't see, variants from another product, a missing variant on a product that has variants, and quantities that aren't whole numbers.
 - **Prices** are shown in Indian rupees (`formatPrice` in `src/lib/utils.ts`).
 
 ## Access control
@@ -55,3 +56,10 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+To fill the shop with a demo catalogue (5 approved stores, 21 colourful products with variants, photos and reviews), run the seed. The photos are links to [DummyJSON](https://dummyjson.com/docs/products)'s free product images, which `next.config.ts` allows through `images.remotePatterns`. It writes to the database in `DATABASE_URL`. Re-running it replaces the demo data, and `--remove` deletes it. Everything it creates belongs to `@seed.daylight.test` users.
+
+```bash
+npx tsx --env-file=.env scripts/seed_demo_products.ts
+npx tsx --env-file=.env scripts/seed_demo_products.ts --remove
+```

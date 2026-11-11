@@ -11,6 +11,7 @@ export {
   HeartIcon,
   LogOutIcon,
   MenuIcon,
+  MinusIcon,
   PlusIcon,
   ReturnIcon,
   SealIcon,
