@@ -95,6 +95,8 @@ export function CheckoutForm({
   // form after its action runs).
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Enter in a text field submits even while the buttons are disabled.
+    if (pending) return;
     const formData = new FormData(event.currentTarget);
     startTransition(() => formAction(formData));
   }

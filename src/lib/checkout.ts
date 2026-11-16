@@ -49,7 +49,14 @@ export const INDIAN_STATES = [
 /** Six digits, not starting with 0. */
 export const PIN_CODE_PATTERN = '[1-9][0-9]{5}';
 
-/** The simulated card that is always declined, as in Stripe's test mode. */
+/**
+ * The simulated card that is always declined, as in Stripe's test mode.
+ *
+ * Payments are simulated: the card number and code reach the server as
+ * plain form fields, are only checked for shape, and only the last 4
+ * digits are stored. A real gateway must take card details in its own
+ * hosted fields and hand back a token instead.
+ */
 export const DECLINED_TEST_CARD = '4000000000000002';
 
 export type CheckoutField =
@@ -87,8 +94,11 @@ export type CheckoutInput = {
     | { method: Extract<PaymentMethod, 'CASH_ON_DELIVERY'> };
   /** The speed picked for each store's parcel, by store id. */
   speeds: Map<string, DeliverySpeed>;
-  /** The total the shopper saw, in paise, so a changed bag isn't charged silently. */
-  expectedTotalPaise: number;
+  /**
+   * The total the shopper saw, in paise, so a changed bag isn't charged
+   * silently. Null when the form sent no usable total.
+   */
+  expectedTotalPaise: number | null;
 };
 
 const text = (formData: FormData, name: string) =>
@@ -213,9 +223,12 @@ export function parseCheckoutForm(
     speeds.set(name.slice(6), value === 'EXPRESS' ? 'EXPRESS' : 'STANDARD');
   }
 
-  const expectedTotalPaise = Math.round(
-    Number(text(formData, 'expectedTotal')) * 100,
-  );
+  // Number('') is 0, so a blank total has to be caught before converting.
+  const rawTotal = text(formData, 'expectedTotal');
+  const expectedTotal = rawTotal === '' ? NaN : Number(rawTotal);
+  const expectedTotalPaise = Number.isFinite(expectedTotal)
+    ? Math.round(expectedTotal * 100)
+    : null;
 
   if (Object.keys(fieldErrors).length > 0 || !address || !payment) {
     return { fieldErrors };
