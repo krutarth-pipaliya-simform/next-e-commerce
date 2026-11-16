@@ -7,6 +7,7 @@ import { initials } from '@/lib/utils';
 
 const nav = [
   { href: '/dashboard', label: 'Overview' },
+  { href: '/dashboard/orders', label: 'Orders' },
   { href: '/dashboard/wishlist', label: 'Wishlist' },
   { href: '/dashboard/settings', label: 'Profile & addresses' },
   { href: '/sell', label: 'Sell on Daylight' },
